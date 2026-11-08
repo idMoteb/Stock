@@ -1,39 +1,23 @@
-name: OMEGA independent market dataset inspection
+name: OMEGA independent 1000+ daily SGX scientific research
 on:
   push:
     branches: [omega-research-independent-20261108]
   workflow_dispatch:
 jobs:
-  inspect:
+  backtest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
-      - name: Install data libraries
-        run: pip -q install pandas pyarrow huggingface_hub
-      - name: Download datasets and report schema and dates
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip -q install pandas numpy pyarrow huggingface_hub yfinance
+      - name: Download independent market data and run scanner
         run: |
-          python - <<'PY'
-          import time,pandas as pd,pyarrow.parquet as pq
-          from huggingface_hub import hf_hub_download
-          for dataset in ['AlphaDojo/dojo_stock_info','AlphaDojo/dojo_stock_kline']:
-             t=time.time()
-             path=hf_hub_download(repo_id=dataset,repo_type='dataset',filename='data.parquet')
-             pf=pq.ParquetFile(path)
-             print("DATASET",dataset,"SIZE",__import__('os').path.getsize(path),"SECONDS",round(time.time()-t,1),"ROWS",pf.metadata.num_rows,"ROWGROUPS",pf.num_row_groups,flush=True)
-             print("SCHEMA",pf.schema_arrow,flush=True)
-             cols=pf.schema_arrow.names
-             if dataset.endswith('stock_info'):
-               data=pf.read().to_pandas()
-               print("HEAD",data.head(3).to_dict('records'),flush=True)
-               for col in ['market','quote_type','full_exchange_name','ticker','sector']:
-                  if col in data: print('METADATA',col,'top',data[col].value_counts(dropna=False).head(10).to_dict(),flush=True)
-             else:
-               dat=pf.read_row_group(0).to_pandas()
-               print("FIRST_HEAD",dat.head(3).to_dict('records'),flush=True)
-               for col in ['bar_time','date','symbol','ticker']:
-                 if col in dat:print("PRICE",col,'firstgroup',dat[col].min(),dat[col].max(),flush=True)
-               dat=pf.read_row_group(pf.num_row_groups-1).to_pandas()
-               print("LAST_HEAD",dat.tail(3).to_dict('records'),flush=True)
-               for col in ['bar_time','date','symbol','ticker']:
-                 if col in dat:print("PRICE",col,'lastgroup',dat[col].min(),dat[col].max(),flush=True)
-          PY
+          python omega_research.py
+      - name: Upload independent research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-independent-market-research
+          path: omega_outputs/
+          retention-days: 7
