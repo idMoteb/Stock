@@ -1,0 +1,23 @@
+name: OMEGA independent market research smoke test
+on:
+  push:
+    branches:
+      - omega-research-independent-20261108
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check remote execution
+        run: |
+          echo "OMEGA_REMOTE_OK=1"
+          python - <<'PY'
+          import urllib.request
+          for url in ["https://huggingface.co", "https://pypi.org"]:
+            try:
+              with urllib.request.urlopen(url,timeout=8) as r:
+                print("NET",url,r.status)
+            except Exception as e:
+              print("NET_ERR",url,type(e).__name__,str(e)[:130])
+          PY
