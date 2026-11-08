@@ -100,7 +100,7 @@ for ii,(ticker,g) in enumerate(sub.groupby('ticker',sort=True)):
     hybrid=trend&(vcp|wedge|crossback|basebreak)
     mio=spy_bull&hybrid
     fit=15*spy_bull.astype(int)+15*raw_liquid.astype(int)+25*trend.astype(int)+30*(trend&(vcp_prep|kelltrend)).astype(int)+15*hybrid.astype(int)
-    chosen=(mio&(fit==100)&c.notna() & c.index.isin(scan_days))
+    chosen=(mio&c.notna() & c.index.isin(scan_days))
     if not chosen.any(): continue
     ix=np.flatnonzero(chosen.to_numpy())
     highs=hi.to_numpy(dtype=float); closes=c.to_numpy(dtype=float)
@@ -127,12 +127,12 @@ S=pd.DataFrame(signals)
 S=S.merge(meta[['ticker','sector']],on='ticker',how='left',suffixes=('','_meta'))
 S['sector']=S['sector_meta'].fillna('')
 S.drop(columns=['sector_meta'],inplace=True)
-# Rank among full MIO candidates, not among only FIT100, requires broader set;
-# HERE all signals are FIT100 so rank is a conditional rank, labeled explicitly.
+# Rank among ALL local-MIO screened candidates for this scan date, prior to FIT100 filtering.
 S=S.sort_values(['scan_date','rank_momentum'],ascending=[True,False])
-S['rank_in_fit100']=S.groupby('scan_date').cumcount()+1
-S['fit100_batch_size']=S.groupby('scan_date').ticker.transform('size')
-S['rankpct_fit100']=(S.fit100_batch_size-S.rank_in_fit100+.5)/S.fit100_batch_size
+S['mio_rank']=S.groupby('scan_date').cumcount()+1
+S['mio_batch_size']=S.groupby('scan_date').ticker.transform('size')
+S['rankpct_mio']=(S.mio_batch_size-S.mio_rank+.5)/S.mio_batch_size
+S['fit100']=S.fit_score.eq(100)
 # Peers are other selected FIT100 stocks in same-day same-sector: proxy for full MIO scanner, not platform parity
 S['peer_n']=S.groupby(['scan_date','sector']).ticker.transform('size')-1
 S['daychange']=np.nan
@@ -147,13 +147,13 @@ valid=S.sector.ne('')
 g=S.groupby(['scan_date','sector'])
 S['peer_pos']=g['daychange'].transform(lambda a:(a>0).sum())-S.daychange.gt(0).astype(int)
 S['peer_up_frac']=S.peer_pos/S.peer_n.replace(0,np.nan)
-S['a_plus']=(S.return126_pct>=140)&((S.rank_momentum>=120)|S.noncross)
-S['rank975']=S.rankpct_fit100>=.975
-S['csmm']=(S.return126_pct>=130)&S.noncross&(S.peer_n>=2)&(S.peer_up_frac>=.6)&valid
+S['a_plus']=S.fit100&(S.return126_pct>=140)&((S.rank_momentum>=120)|S.noncross)
+S['rank975']=S.fit100&(S.rankpct_mio>=.975)
+S['csmm']=S.fit100&(S.return126_pct>=130)&S.noncross&(S.peer_n>=2)&(S.peer_up_frac>=.6)&valid
 S['csmm_or_aplusrank']=S.csmm|(S.a_plus&S.rank975)
 S['csmm_or_rank']=S.csmm|S.rank975
 S['aplus_and_rank']=S.a_plus&S.rank975
-models=[('SGX_FIT100_all',pd.Series(True,index=S.index)),('A_PLUS',S.a_plus),('RANK_TOP_2_5pct_FIT100_UNIVERSE',S.rank975),('CSMM',S.csmm),('CSMM_OR_AplusRank',S.csmm_or_aplusrank),('CSMM_OR_Rank',S.csmm_or_rank),('Aplus_AND_Rank',S.aplus_and_rank)]
+models=[('MIO_local_screen_all',pd.Series(True,index=S.index)),('SGX_FIT100_all',S.fit100),('A_PLUS',S.a_plus),('RANK_TOP_2_5pct_FIT100_UNIVERSE',S.rank975),('CSMM',S.csmm),('CSMM_OR_AplusRank',S.csmm_or_aplusrank),('CSMM_OR_Rank',S.csmm_or_rank),('Aplus_AND_Rank',S.aplus_and_rank)]
 rows=[]
 for name,mask in models:
  d=S[mask];row={'model':name,'unique_stocks':int(d.ticker.nunique()),'scan_days_with_signals':int(d.scan_date.nunique()),'stock_day_signals':len(d)}
@@ -174,9 +174,9 @@ dates['signals_fit100']=dates.scan_date.map(S.groupby('scan_date').size()).filln
 dates.to_csv(OUT/'ALL_DAILY_SCAN_DATES.csv',index=False)
 data={'data_source':'AlphaDojo/dojo_stock_kline & dojo_stock_info','start':str(START.date()),'end':str(END.date()),
       'actual_scan_days':len(scan_days),'unique_us_stocks_with_history':len(eligible),
-      'min_quoted_stocks_per_scan_day':minimum,'fit100_signals':len(S),
-      'caveats':['Rank is among FIT100 signals, not all MIO signals; cannot claim MIO platform rank parity.',
-                 'Sector synchronization computed among FIT100 same-sector signals; actual MIO includes non-FIT100 candidates.',
+      'min_quoted_stocks_per_scan_day':minimum,'mio_signals_total':len(S),'fit100_signals':int(S.fit100.sum()),
+      'caveats':['Rank is among all local MIO screened candidates; vendor and exchange can differ from actual MIO platform.',
+                 'Sector synchronization computed among all local-MIO same-sector candidates, not official MIO platform feed.',
                  'Endpoint price targets use High in next 20 market sessions; closing direction close scan to close after n sessions.',
                  'Consecutive stock-day signals overlap; these are not independent trials.',
                  'Point-in-time membership and historical sector classifications not audited.',
