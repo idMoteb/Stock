@@ -1,23 +1,23 @@
-name: OMEGA independent market research smoke test
+name: OMEGA independent market data probe
 on:
   push:
     branches:
       - omega-research-independent-20261108
   workflow_dispatch:
 jobs:
-  smoke:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - name: Check remote execution
+      - uses: actions/checkout@v4
+      - name: Probe public OHLCV file schemas and access
         run: |
-          echo "OMEGA_REMOTE_OK=1"
           python - <<'PY'
-          import urllib.request
-          for url in ["https://huggingface.co", "https://pypi.org"]:
-            try:
-              with urllib.request.urlopen(url,timeout=8) as r:
-                print("NET",url,r.status)
-            except Exception as e:
-              print("NET_ERR",url,type(e).__name__,str(e)[:130])
+          import urllib.request,json
+          for repo in ['AlphaDojo/dojo_stock_kline','AlphaDojo/dojo_stock_info']:
+              url='https://huggingface.co/api/datasets/'+repo+'/tree/main?recursive=true&expand=true'
+              try:
+                result=json.load(urllib.request.urlopen(url,timeout=20))
+                print('REPO',repo,'FILES',[(x.get('path'),x.get('size')) for x in result[:30]])
+              except Exception as exc:print('ERR',repo,str(exc)[:500])
           PY
