@@ -102,6 +102,32 @@ for ii,(ticker,g) in enumerate(sub.groupby('ticker',sort=True)):
     fit=15*spy_bull.astype(int)+15*raw_liquid.astype(int)+25*trend.astype(int)+30*(trend&(vcp_prep|kelltrend)).astype(int)+15*hybrid.astype(int)
     chosen=(mio&c.notna() & c.index.isin(scan_days))
     if not chosen.any(): continue
+    # PRE-SIGNAL SCIENCE METRICS: all trailing-only at scan-day close
+    one_ret=c.pct_change(fill_method=None)
+    true_range=pd.concat([hi-lo,(hi-c.shift(1)).abs(),(lo-c.shift(1)).abs()],axis=1).max(axis=1)
+    atr14=true_range.rolling(14,min_periods=14).mean()/c
+    vol20=one_ret.rolling(20,min_periods=20).std()
+    vol60=one_ret.rolling(60,min_periods=60).std()
+    vol_ratio=vol20/vol60
+    volume_ratio=v/v.shift(1).rolling(20,min_periods=20).mean()
+    gain20=(c/c.shift(20)-1)
+    gain5=(c/c.shift(5)-1)
+    gain10=(c/c.shift(10)-1)
+    efficiency20=(c-c.shift(20)).abs()/(c.diff().abs().rolling(20,min_periods=20).sum())
+    closeloc=(c-lo)/(hi-lo).replace(0,np.nan)
+    candle_body=(c-op)/(hi-lo).replace(0,np.nan)
+    upper_wick=(hi-pd.concat([op,c],axis=1).max(axis=1))/(hi-lo).replace(0,np.nan)
+    previous_20_high=hi.shift(1).rolling(20,min_periods=20).max()
+    previous_52high=hi.shift(1).rolling(252,min_periods=252).max()
+    previous_20_low=lo.shift(1).rolling(20,min_periods=20).min()
+    break20=(c/previous_20_high-1)
+    at_52high=c/previous_52high
+    range20=hi.rolling(20,min_periods=20).max()-lo.rolling(20,min_periods=20).min()
+    prior_range20=(hi.shift(20).rolling(20,min_periods=20).max()-lo.shift(20).rolling(20,min_periods=20).min())
+    rangecompression=range20/prior_range20
+    gap=(op/c.shift(1)-1)
+    updays10=(one_ret.gt(0)).rolling(10,min_periods=10).sum()
+    maxdown20=one_ret.rolling(20,min_periods=20).min()
     ix=np.flatnonzero(chosen.to_numpy())
     highs=hi.to_numpy(dtype=float); closes=c.to_numpy(dtype=float)
     for k in ix:
@@ -113,6 +139,14 @@ for ii,(ticker,g) in enumerate(sub.groupby('ticker',sort=True)):
         signals.append({'ticker':ticker,'scan_date':str(all_days[k].date()),'sector':None,
           'rank_momentum':100*(.6*r63.iloc[k]+.4*r126.iloc[k]),'return126_pct':100*r126.iloc[k],
           'fit_score':int(fit.iloc[k]),'noncross':bool(vcp.iloc[k] or wedge.iloc[k] or basebreak.iloc[k]),
+          'atr14_pct':float(100*atr14.iloc[k]),'vol20_pct':float(100*vol20.iloc[k]),'vol60_pct':float(100*vol60.iloc[k]),
+          'volatility_ratio':float(vol_ratio.iloc[k]),'rvol20':float(volume_ratio.iloc[k]),
+          'gain5_pct':float(100*gain5.iloc[k]),'gain10_pct':float(100*gain10.iloc[k]),'gain20_pct':float(100*gain20.iloc[k]),
+          'efficiency20':float(efficiency20.iloc[k]),'close_location':float(closeloc.iloc[k]),
+          'candle_body_ratio':float(candle_body.iloc[k]),'upper_wick_ratio':float(upper_wick.iloc[k]),
+          'break20_pct':float(100*break20.iloc[k]),'near52high_pct':float(100*at_52high.iloc[k]),
+          'rangecompression20':float(rangecompression.iloc[k]),'gap_pct':float(100*gap.iloc[k]),
+          'updays10':float(updays10.iloc[k]),'maxdown20_pct':float(100*maxdown20.iloc[k]),
           'base_mio':True,'p5':hret(5),'p10':hret(10),'p20':hret(20),
           'maxhi20':float(np.max(future_highs)),'close_at_scan':float(entry),
           'hit10':bool(np.max(future_highs)>=entry*1.1),'hit15':bool(np.max(future_highs)>=entry*1.15),
