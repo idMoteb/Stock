@@ -1,23 +1,26 @@
-name: OMEGA independent 1000+ daily SGX scientific research
+name: OMEGA final all-period independent market downside audit
 on:
   push:
     branches: [omega-research-independent-20261108]
   workflow_dispatch:
 jobs:
-  backtest:
+  risk-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        period: [jan, mar, aug]
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
+      - name: Install research dependencies
         run: pip -q install pandas numpy pyarrow huggingface_hub yfinance
-      - name: Download independent market data and run scanner
-        run: |
-          python omega_research_janfeb.py
-      - name: Upload independent research evidence
+      - name: Scan independent OHLCV and measure 20-session adverse excursion
+        run: python omega_research_risk_${{ matrix.period }}.py
+      - name: Save risk audit evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: omega-independent-jan-feb-2026
-          path: omega_janfeb_outputs/
-          retention-days: 7
+          name: omega-final-risk-${{ matrix.period }}
+          path: omega_risk_${{ matrix.period }}/
+          retention-days: 14
