@@ -13,11 +13,11 @@ jobs:
         run: pip -q install pandas numpy pyarrow huggingface_hub yfinance
       - name: Download independent market data and run scanner
         run: |
-          python omega_research.py
+          python omega_research_aug.py
       - name: Upload independent research evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: omega-independent-market-research
-          path: omega_outputs/
+          name: omega-independent-aug-oct-2026
+          path: omega_aug_outputs/
           retention-days: 7
