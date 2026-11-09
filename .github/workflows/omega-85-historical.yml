@@ -1,22 +1,22 @@
-name: OMEGA 2024-2025 independent 85pct validation
+name: OMEGA 2023 virgin independent stress-test archive
 on:
   push:
     branches: [omega-85plus-independent-validation-20261109]
   workflow_dispatch:
 jobs:
-  multi-year-holdout:
+  historical2023:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: pip -q install pandas numpy pyarrow huggingface_hub yfinance
-      - name: Download 7000-stock 2024-2025 archive and run frozen local SGX research proxy
-        run: python omega_research_2024_2025_validation.py
-      - name: Upload independently validated signal evidence
+      - name: Dependencies
+        run: pip -q install numpy pandas pyarrow huggingface_hub yfinance
+      - name: Scan 2023 US universe using 2022 trailing history
+        run: python omega_research_2023_pristine.py
+      - name: Save evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: omega-2024-2025-independent-holdout
-          path: omega_holdout_2024_2025/
+          name: omega-historical-2023-new-cohort
+          path: omega_holdout_2023/
           retention-days: 14
