@@ -44,13 +44,13 @@ p=p[(p.close>0)&(p.volume>=0)&(p.low<=p.close)&(p.high>=p.close)&(p.high>=p.low)
 p=p.sort_values(['ticker','date']).drop_duplicates(['ticker','date'])
 spy=p[p.ticker.eq('SPY')].set_index('date').close.sort_index()
 print('SPY_DAILY_RECORDS',len(spy),'SPY_DATE_RANGE',spy.index.min(),spy.index.max(),flush=True)
-if len(spy)<len(scan_days)+190:
+if len(spy)<260:
     print('SPY_MISSING_DOWNLOAD_ALTERNATIVE',flush=True)
     import yfinance as yf
     q=yf.download('SPY',start=str((START-pd.Timedelta(days=620)).date()),end=str((END+pd.Timedelta(days=50)).date()),auto_adjust=True,progress=False,threads=False)
     if isinstance(q.columns,pd.MultiIndex):q.columns=q.columns.get_level_values(0)
     spy=q.Close.copy();spy.index=pd.to_datetime(spy.index).normalize()
-if len(spy)<len(scan_days)+190:raise RuntimeError('NO_VALID_SPY_MARKET_BENCHMARK')
+if len(spy)<260:raise RuntimeError('NO_VALID_SPY_MARKET_BENCHMARK')
 all_days=spy.index
 scan_days=all_days[(all_days>=START)&(all_days<=END)]
 print('ACTUAL_SCAN_DATES',len(scan_days),'FIRST',scan_days.min(),'LAST',scan_days.max(),flush=True)
