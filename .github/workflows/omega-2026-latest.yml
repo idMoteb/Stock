@@ -1,0 +1,23 @@
+name: OMEGA 2026 latest matured and pending scans through Nov 06
+on:
+  push:
+    branches: [omega-2021-2026-contiguous-research-20261109]
+    paths: [.github/workflows/omega-2026-latest.yml]
+  workflow_dispatch:
+jobs:
+  scan-latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: pip -q install numpy pandas pyarrow huggingface_hub yfinance
+      - name: Scan Oct through latest close without pretending pending targets completed
+        run: python omega_2026_10_to_last_available.py
+      - name: Export evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-latest-2026-matured-and-pending
+          path: omega_2026_to_last_available/
+          retention-days: 14
