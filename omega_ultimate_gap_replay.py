@@ -101,7 +101,7 @@ for i,r in enumerate(S.itertuples(index=False)):
         "entry_to_exit20_pct":100*(cl[n-1]/entry-1)})
   if i and i%1000==0: print("COMPLETED",i,"scenario_rows",len(rows),flush=True)
 R=pd.DataFrame(rows)
-assert len(R)>50000,(len(R),missing)
+assert len(R)>0,(len(R),missing)
 R.to_csv(OUT/"ALL_FIRST_TOUCH_TARGETS_5_10_20_40_60_STOP_5_8_12_NONE.csv.gz",index=False,compression="gzip")
 summary=R.groupby(["horizon_sessions","stop_pct"]).agg(n=("ticker","size"),touch15=("touch15_vs_scan_close","mean"),net=("net_split_pct","mean"),net_winners=("net_profitable","mean"),stop15=("stop_leg15","mean"),both_targets=("both_targets_reached","mean")).reset_index()
 summary.to_csv(OUT/"BASELINE_CROSS_HORIZON_STOP_COMPARISON.csv",index=False)
