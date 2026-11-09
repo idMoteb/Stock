@@ -56,6 +56,8 @@ print("FINAL_PUBLISHED_EARNINGS_EVENTS",len(g),"TICKERS",g.ticker.nunique(),flus
 g.to_csv(OUT/"DEDUP_REAL_PUBLISHED_EARNINGS_EVENTS.csv",index=False)
 l=S.sort_values(["scan_date","ticker"]).copy()
 r=g.sort_values(["publication_effective","ticker"]).copy()
+l["scan_date"]=pd.to_datetime(l.scan_date).astype("datetime64[ns]")
+r["publication_effective"]=pd.to_datetime(r.publication_effective).astype("datetime64[ns]")
 m=pd.merge_asof(l,r,left_on="scan_date",right_on="publication_effective",by="ticker",direction="backward",allow_exact_matches=True)
 m["earnings_age_calendar_days"]=(m.scan_date-m.publication_date).dt.days
 m["earnings_report_available"]=m.publication_date.notna()
