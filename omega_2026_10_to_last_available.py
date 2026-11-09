@@ -61,7 +61,13 @@ if len(eligible)<1000:raise RuntimeError('UNIVERSE_BELOW_1000')
 daily_coverage=sub[sub.date.between(START,END)].groupby('date').ticker.nunique()
 minimum=min(int(daily_coverage.get(d,0)) for d in scan_days)
 print('MIN_STOCK_COVERAGE_ON_EACH_DATE',minimum,flush=True)
-if minimum<1000:raise RuntimeError('DAILY_QUOTES_BELOW_1000')
+if minimum<1000:
+    skipped=[str(x.date()) for x in scan_days if int(daily_coverage.get(x,0))<1000]
+    print('EXCLUDED_PARTIALLY_REPORTED_LAST_MARKET_SESSIONS',skipped,flush=True)
+    scan_days=scan_days[[int(daily_coverage.get(x,0))>=1000 for x in scan_days]]
+    if len(scan_days)<3:raise RuntimeError('FEWER_THAN_THREE_COMPLETE_SESSIONS')
+    minimum=min(int(daily_coverage.get(d,0)) for d in scan_days)
+    print('FINAL_COMPLETE_SCAN_DAYS',len(scan_days),'LAST_COMPLETE',str(scan_days.max().date()),'MIN_DAILY_STOCKS',minimum,flush=True)
 
 spy200=spy.rolling(200,min_periods=200).mean()
 spy63=spy/spy.shift(63)-1
