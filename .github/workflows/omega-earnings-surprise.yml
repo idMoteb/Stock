@@ -1,0 +1,37 @@
+name: OMEGA alternate-data earnings surprise full historical evidence
+on:
+  push:
+    branches: [omega-event-catalyst-research-20261109]
+    paths: [.github/workflows/omega-earnings-surprise.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  lagged-earnings-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install external-data tools
+        run: pip -q install pandas numpy pyarrow huggingface_hub
+      - name: Retrieve 20,045 archived SGX research signals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p oldsignals/y2021 oldsignals/y2023 oldsignals/y2024 oldsignals/jan oldsignals/mar oldsignals/aug
+          gh run download 42576296813 -R idMoteb/Stock -n omega-2021-2022-frozen-test -D oldsignals/y2021
+          gh run download 42573630736 -R idMoteb/Stock -n omega-historical-2023-new-cohort -D oldsignals/y2023
+          gh run download 42570294837 -R idMoteb/Stock -n omega-2024-2025-independent-holdout -D oldsignals/y2024
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-jan -D oldsignals/jan
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-mar -D oldsignals/mar
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-aug -D oldsignals/aug
+      - name: Join only EPS disclosures already published before scan date
+        run: python omega_external_earnings_join.py
+      - name: Save evidence and auditable event timestamps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-all-era-lagged-earnings-evidence
+          path: omega_earnings_event_out/
+          retention-days: 14
