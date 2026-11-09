@@ -1,0 +1,46 @@
+name: OMEGA final first-touch 5 to 60 sessions independent market replay
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-ultimate-horizon.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exhaustive-earliest-target:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        era: [old,new]
+    env:
+      OMEGA_ERA: ${{ matrix.era }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip -q install pandas numpy pyarrow huggingface_hub exchange_calendars
+      - name: Load archived frozen scanner daily signals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloaded/y2021 downloaded/y2023 downloaded/y2024 downloaded/jan downloaded/mar downloaded/aug
+          if [ "$OMEGA_ERA" = old ]; then
+            gh run download 42576296813 -R idMoteb/Stock -n omega-2021-2022-frozen-test -D downloaded/y2021
+            gh run download 42573630736 -R idMoteb/Stock -n omega-historical-2023-new-cohort -D downloaded/y2023
+            gh run download 42570294837 -R idMoteb/Stock -n omega-2024-2025-independent-holdout -D downloaded/y2024
+          else
+            gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-jan -D downloaded/jan
+            gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-mar -D downloaded/mar
+            gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-aug -D downloaded/aug
+          fi
+      - name: Calculate every earliest limit profit and conservative stop exit
+        run: python omega_ultimate_horizon_firsttouch.py
+      - name: Export reproducible audited evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-ultimate-early-5-60-${{ matrix.era }}
+          path: omega_extended_firsttouch_${{ matrix.era }}/
+          retention-days: 14
