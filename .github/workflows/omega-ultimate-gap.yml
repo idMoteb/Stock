@@ -1,0 +1,45 @@
+name: OMEGA final previously missing 2021 to Nov 2026 earliest-exit stress runs
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-ultimate-gap.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  missing-historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        era: [gap,recent]
+    env:
+      OMEGA_ERA: ${{ matrix.era }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install independent source libraries
+        run: pip -q install pandas numpy pyarrow huggingface_hub exchange_calendars
+      - name: Retrieve archived missing historic daily SGX scans
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloaded/gap1 downloaded/gap2 downloaded/gap3 downloaded/gap4 downloaded/recent
+          if [ "$OMEGA_ERA" = gap ]; then
+            gh run download 42583704760 -R idMoteb/Stock -n omega-missing-early2021 -D downloaded/gap1
+            gh run download 42583704760 -R idMoteb/Stock -n omega-missing-late2022_early2023 -D downloaded/gap2
+            gh run download 42583704760 -R idMoteb/Stock -n omega-missing-winter2024 -D downloaded/gap3
+            gh run download 42583704760 -R idMoteb/Stock -n omega-missing-late2025 -D downloaded/gap4
+          else
+            gh run download 42584204257 -R idMoteb/Stock -n omega-latest-2026-matured-and-pending -D downloaded/recent
+          fi
+      - name: Evaluate earliest 10pct and 15pct take profits with realistic stop priority and all horizons
+        run: python omega_ultimate_gap_replay.py
+      - name: Export auditable event-level all-horizon evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-ultimate-early-5-60-${{ matrix.era }}
+          path: omega_extended_firsttouch_${{ matrix.era }}/
+          retention-days: 14
