@@ -1,0 +1,23 @@
+name: OMEGA November 2026 pending cohort only
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-nov-2026-pending.yml]
+  workflow_dispatch:
+jobs:
+  scan-pending:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install
+        run: pip -q install numpy pandas pyarrow huggingface_hub yfinance
+      - name: Scan current pending signals without assessing uncompleted 20-session outcome
+        run: python omega_nov2026_pending.py
+      - name: Export pending evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-Nov-2026-pending-signals
+          path: omega_pending_nov2026/
+          retention-days: 14
