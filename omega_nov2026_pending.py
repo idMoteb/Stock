@@ -59,6 +59,11 @@ meta=meta[meta.ticker.isin(eligible)]
 print('STOCKS_WITH_HISTORY',len(eligible),'BARS',len(sub),flush=True)
 if len(eligible)<1000:raise RuntimeError('UNIVERSE_BELOW_1000')
 daily_coverage=sub[sub.date.between(START,END)].groupby('date').ticker.nunique()
+# Source may contain partial-date vendor snapshots. Exclude incomplete scan days, never infer missing symbols as failure.
+excluded_days=[str(d.date()) for d in scan_days if int(daily_coverage.get(d,0))<3000]
+scan_days=pd.DatetimeIndex([d for d in scan_days if int(daily_coverage.get(d,0))>=3000])
+print('EXCLUDED_PARTIAL_VENDOR_DAYS',excluded_days,flush=True)
+if len(scan_days)<10:raise RuntimeError('TOO_FEW_COMPLETE_VENDOR_DAYS')
 minimum=min(int(daily_coverage.get(d,0)) for d in scan_days)
 print('MIN_STOCK_COVERAGE_ON_EACH_DATE',minimum,flush=True)
 if minimum<1000:raise RuntimeError('DAILY_QUOTES_BELOW_1000')
@@ -190,6 +195,6 @@ S['aplus_and_rank']=S.a_plus&S.rank975
 # Explicitly pending: all future 20-session target labels are undefined, NEVER set False.
 S['data_status']='PENDING_20_FUTURE_EXCHANGE_SESSIONS'
 S.to_csv(OUT/'PENDING_OCT_NOV_2026_SCAN_COHORT.csv',index=False)
-manifest={'asof_data':'2026-11-06','scan_start':str(START.date()),'scan_end':str(END.date()),'eligible_with_history':len(eligible),'pending_fit100':int(S.fit100.sum()),'pending_scan_signals':len(S),'scan_dates':len(scan_days),'note':'As-of 2026-11-09, 20 future sessions are not complete for recent scans. No hit15/hit10 outcome inferred. Original SGX unchanged.'}
+manifest={'asof_data':'2026-11-06','latest_complete_scan_day':str(scan_days.max().date()),'excluded_partial_vendor_days':excluded_days,'scan_start':str(START.date()),'scan_end':str(END.date()),'eligible_with_history':len(eligible),'pending_fit100':int(S.fit100.sum()),'pending_scan_signals':len(S),'scan_dates':len(scan_days),'note':'As-of 2026-11-09, 20 future sessions are not complete for recent scans. No hit15/hit10 outcome inferred. Original SGX unchanged.'}
 (OUT/'PENDING_MANIFEST.json').write_text(json.dumps(manifest,indent=2))
 print('PENDING_2026_SCAN_MANIFEST',json.dumps(manifest),flush=True)
