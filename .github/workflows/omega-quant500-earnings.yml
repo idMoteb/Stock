@@ -1,0 +1,32 @@
+name: OMEGA current SEC-announcement catalyst backtest data
+on:
+  push:
+    branches: [omega-event-catalyst-research-20261109]
+    paths: [.github/workflows/omega-quant500-earnings.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  earnings-calendar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip -q install requests pandas numpy
+      - name: Fetch earlier audited all-signal EPS join
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p eventsource
+          gh run download 42604755737 -R idMoteb/Stock -n omega-all-era-lagged-earnings-evidence -D eventsource
+      - name: Join contemporary event dates with explicit delayed visibility
+        run: python omega_quant500_earnings_join.py
+      - name: Archive 2021-2026 dated catalyst signals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-contemporary-earnings-event-backtest-data
+          path: omega_earnings_dates_out/
+          retention-days: 14
