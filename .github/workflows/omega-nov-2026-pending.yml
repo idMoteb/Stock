@@ -1,4 +1,4 @@
-name: OMEGA November 2026 pending cohort only
+name: OMEGA November 2026 complete-snapshot pending cohort only
 on:
   push:
     branches: [omega-85plus-independent-validation-20261109]
