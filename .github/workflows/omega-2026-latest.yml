@@ -1,4 +1,4 @@
-name: OMEGA 2026 latest matured and pending scans through Nov 06
+name: OMEGA 2026 latest complete-session redo excluding partial vendor days
 on:
   push:
     branches: [omega-2021-2026-contiguous-research-20261109]
