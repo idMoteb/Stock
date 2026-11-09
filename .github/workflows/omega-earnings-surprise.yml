@@ -1,4 +1,4 @@
-name: OMEGA alternate-data earnings surprise full historical evidence
+name: OMEGA alternate-data earnings surprise full historical evidence v2
 on:
   push:
     branches: [omega-event-catalyst-research-20261109]
