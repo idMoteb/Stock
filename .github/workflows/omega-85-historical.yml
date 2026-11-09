@@ -1,0 +1,36 @@
+name: OMEGA Historical Independent Dataset Schema Probe
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Install source tools
+        run: pip -q install huggingface_hub pyarrow
+      - name: Examine historical holdout datasets
+        run: |
+          python - <<'PY'
+          import json,urllib.request,traceback
+          from huggingface_hub import HfApi
+          api=HfApi()
+          for ds in ["HexQuant/Stocks-Daily-Price","AmirTrader/YahooFinance"]:
+            try:
+              d=api.dataset_info(ds)
+              print("HF_DATASET",ds,"gated",d.gated,"files",len(d.siblings))
+              print("FILE_SAMPLE",[(x.rfilename,x.size) for x in d.siblings[:15]])
+            except Exception as exc:print("DATASET_ERROR",ds,type(exc).__name__,str(exc)[:500])
+          try:
+            from huggingface_hub import hf_hub_download
+            import pyarrow.parquet as pq
+            a=api.dataset_info("HexQuant/Stocks-Daily-Price")
+            c=[x.rfilename for x in a.siblings if x.rfilename.endswith(".parquet")]
+            if c:
+               p=hf_hub_download("HexQuant/Stocks-Daily-Price",filename=c[0],repo_type="dataset")
+               f=pq.ParquetFile(p)
+               print("HEXQUANT_PARQUET",c[0],"rows",f.metadata.num_rows,"schema",f.schema_arrow,"rowgroups",f.num_row_groups)
+               print("FIRST",f.read_row_group(0).slice(0,3).to_pydict())
+          except Exception as exc:print("FILE_FETCH_ERROR",type(exc).__name__,str(exc)[:500])
+          PY
