@@ -1,0 +1,34 @@
+name: OMEGA 2026 next-open first-touch 10% 15% vs 8% stop audit
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-nextopen-firsttouch.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  first-touch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install research requirements
+        run: pip -q install pandas numpy pyarrow huggingface_hub
+      - name: Fetch three signed independent scanner evidence artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloaded/jan downloaded/mar downloaded/aug
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-jan -D downloaded/jan
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-mar -D downloaded/mar
+          gh run download 42527174316 -R idMoteb/Stock -n omega-final-risk-aug -D downloaded/aug
+      - name: Replay next open realistic 10/15 split and stop
+        run: python omega_nextopen_firsttouch.py
+      - name: Upload event-level trade-research simulation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-firsttouch-2026-evidence
+          path: omega_firsttouch_results/
+          retention-days: 14
