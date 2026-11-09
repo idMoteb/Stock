@@ -1,0 +1,32 @@
+name: OMEGA frozen 2021-2022 next-open 10/15 stop audit
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-2021-2022-firsttouch.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  frozen-firsttouch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install libraries
+        run: pip -q install numpy pandas pyarrow huggingface_hub exchange_calendars
+      - name: Download frozen signal evidence from older market era
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p downloaded/frozen
+          gh run download 42576296813 -R idMoteb/Stock -n omega-2021-2022-frozen-test -D downloaded/frozen
+      - name: Replay 2021-2022 next-open trade outcomes with unchanged exit policy
+        run: python omega_frozen_2021_2022_firsttouch.py
+      - name: Export audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-frozen-2021-2022-exit-evidence
+          path: omega_frozen_2021_2022_firsttouch/
+          retention-days: 14
