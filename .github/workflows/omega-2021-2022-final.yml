@@ -1,0 +1,23 @@
+name: OMEGA 2021-2022 truly older stress evaluation frozen before testing
+on:
+  push:
+    branches: [omega-85plus-independent-validation-20261109]
+    paths: [.github/workflows/omega-2021-2022-final.yml]
+  workflow_dispatch:
+jobs:
+  frozen-old-regime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip -q install pandas numpy pyarrow huggingface_hub yfinance
+      - name: Download 2020-2022 historical bars and run 2021-22 frozen market scanner
+        run: python omega_research_frozen_2021_2022.py
+      - name: Export unseen historic stock scans
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-2021-2022-frozen-test
+          path: omega_holdout_2021_2022/
+          retention-days: 14
